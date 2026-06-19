@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows.Forms;
 
 namespace KurokoBasketballDesktop
@@ -34,8 +37,12 @@ namespace KurokoBasketballDesktop
         private readonly Label playerNameLabel;
         private readonly PictureBox avatarBox;
         private readonly Dictionary<string, Color> avatarColors;
+        private readonly Dictionary<string, string> avatarIconKeys;
+        private readonly MainMenuIconLoader iconLoader;
+        private readonly Icon windowIcon;
         private string playerName = "新晋队长";
         private Color avatarColor = Color.FromArgb(56, 189, 248);
+        private string avatarIconKey = "avatar_blue";
 
         /// <summary>
         /// 创建主窗口并搭建全部界面区域。
@@ -43,12 +50,24 @@ namespace KurokoBasketballDesktop
         /// </summary>
         public MainLobbyForm()
         {
+            iconLoader = new MainMenuIconLoader();
+            windowIcon = iconLoader.LoadWindowIcon();
+
             avatarColors = new Dictionary<string, Color>();
             avatarColors.Add("蓝色头像", Color.FromArgb(56, 189, 248));
             avatarColors.Add("红色头像", Color.FromArgb(251, 113, 133));
             avatarColors.Add("金色头像", Color.FromArgb(250, 204, 21));
 
+            avatarIconKeys = new Dictionary<string, string>();
+            avatarIconKeys.Add("蓝色头像", "avatar_blue");
+            avatarIconKeys.Add("红色头像", "avatar_red");
+            avatarIconKeys.Add("金色头像", "avatar_gold");
+
             Text = "黑子的篮球游戏 - 桌面版";
+            if (windowIcon != null)
+            {
+                Icon = windowIcon;
+            }
             StartPosition = FormStartPosition.CenterScreen;
             MinimumSize = new Size(1100, 650);
             Size = new Size(1280, 720);
@@ -75,6 +94,19 @@ namespace KurokoBasketballDesktop
             playerNameLabel = FindControl<Label>("PlayerNameLabel");
             avatarBox = FindControl<PictureBox>("AvatarBox");
             RefreshPlayerProfile();
+        }
+
+        /// <summary>
+        /// 窗口关闭时释放标题栏图标资源。
+        /// 这个图标来自 02_素材图\game_icon.ico，释放后不会影响磁盘上的原文件。
+        /// </summary>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && windowIcon != null)
+            {
+                windowIcon.Dispose();
+            }
+            base.Dispose(disposing);
         }
 
         /// <summary>
@@ -152,10 +184,10 @@ namespace KurokoBasketballDesktop
             panel.Padding = new Padding(10, 11, 10, 10);
             panel.BackColor = Color.FromArgb(31, 41, 55);
 
-            panel.Controls.Add(BuildResourceItem("金币", "12000", Color.FromArgb(250, 204, 21)));
-            panel.Controls.Add(BuildResourceItem("钻石", "300", Color.FromArgb(56, 189, 248)));
-            panel.Controls.Add(BuildResourceItem("点券", "88", Color.FromArgb(167, 139, 250)));
-            panel.Controls.Add(BuildResourceItem("黑子券", "12", Color.FromArgb(229, 231, 235)));
+            panel.Controls.Add(BuildResourceItem("金币", "12000", Color.FromArgb(250, 204, 21), "gold"));
+            panel.Controls.Add(BuildResourceItem("钻石", "300", Color.FromArgb(56, 189, 248), "diamond"));
+            panel.Controls.Add(BuildResourceItem("点券", "88", Color.FromArgb(167, 139, 250), "coupon"));
+            panel.Controls.Add(BuildResourceItem("黑子券", "12", Color.FromArgb(229, 231, 235), "kuroko_ticket"));
             return panel;
         }
 
@@ -163,7 +195,7 @@ namespace KurokoBasketballDesktop
         /// 创建资源栏中的单个资源项。
         /// 图标用代码绘制，右侧显示资源数量。
         /// </summary>
-        private Control BuildResourceItem(string name, string amount, Color color)
+        private Control BuildResourceItem(string name, string amount, Color color, string iconKey)
         {
             Panel item = new Panel();
             item.Width = 104;
@@ -174,7 +206,7 @@ namespace KurokoBasketballDesktop
             PictureBox icon = new PictureBox();
             icon.Location = new Point(2, 5);
             icon.Size = new Size(24, 24);
-            icon.Image = IconFactory.CreateCircleIcon(color, name.Substring(0, 1), 24);
+            icon.Image = CreateMappedIcon(iconKey, 24, delegate { return IconFactory.CreateCircleIcon(color, name.Substring(0, 1), 24); });
             icon.SizeMode = PictureBoxSizeMode.CenterImage;
             item.Controls.Add(icon);
 
@@ -202,8 +234,8 @@ namespace KurokoBasketballDesktop
             panel.Padding = new Padding(8, 8, 0, 0);
             panel.BackColor = Color.Transparent;
 
-            panel.Controls.Add(BuildIconOnlyButton("邮件", Color.FromArgb(229, 231, 235)));
-            panel.Controls.Add(BuildIconOnlyButton("篮球交易市场", Color.FromArgb(250, 204, 21)));
+            panel.Controls.Add(BuildIconOnlyButton("邮件", Color.FromArgb(229, 231, 235), "mail"));
+            panel.Controls.Add(BuildIconOnlyButton("篮球交易市场", Color.FromArgb(250, 204, 21), "market"));
             return panel;
         }
 
@@ -222,9 +254,9 @@ namespace KurokoBasketballDesktop
             row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
             row.Padding = new Padding(0, 6, 0, 6);
 
-            row.Controls.Add(BuildIconTextButton("会员卡商店", Color.FromArgb(56, 189, 248)), 0, 0);
-            row.Controls.Add(BuildIconTextButton("赛季征程", Color.FromArgb(250, 204, 21)), 1, 0);
-            row.Controls.Add(BuildIconTextButton("限时商店", Color.FromArgb(251, 113, 133)), 2, 0);
+            row.Controls.Add(BuildIconTextButton("会员卡商店", Color.FromArgb(56, 189, 248), "member_card"), 0, 0);
+            row.Controls.Add(BuildIconTextButton("赛季征程", Color.FromArgb(250, 204, 21), "season"), 1, 0);
+            row.Controls.Add(BuildIconTextButton("限时商店", Color.FromArgb(251, 113, 133), "limited_shop"), 2, 0);
             return row;
         }
 
@@ -260,9 +292,9 @@ namespace KurokoBasketballDesktop
             menu.Padding = new Padding(4, 18, 8, 0);
             menu.BackColor = Color.Transparent;
 
-            menu.Controls.Add(BuildSideEntry("扭蛋", Color.FromArgb(56, 189, 248)));
-            menu.Controls.Add(BuildSideEntry("商城", Color.FromArgb(250, 204, 21)));
-            menu.Controls.Add(BuildSideEntry("活动大厅", Color.FromArgb(251, 113, 133)));
+            menu.Controls.Add(BuildSideEntry("扭蛋", Color.FromArgb(56, 189, 248), "gacha"));
+            menu.Controls.Add(BuildSideEntry("商城", Color.FromArgb(250, 204, 21), "shop"));
+            menu.Controls.Add(BuildSideEntry("活动大厅", Color.FromArgb(251, 113, 133), "activity"));
             return menu;
         }
 
@@ -346,7 +378,7 @@ namespace KurokoBasketballDesktop
         /// 创建左侧单个入口。
         /// 图标在上方，功能名称在下方。
         /// </summary>
-        private Control BuildSideEntry(string text, Color color)
+        private Control BuildSideEntry(string text, Color color, string iconKey)
         {
             Panel item = new Panel();
             item.Width = 74;
@@ -356,7 +388,7 @@ namespace KurokoBasketballDesktop
             item.Click += delegate { ShowFeaturePage(text); };
 
             PictureBox icon = new PictureBox();
-            icon.Image = IconFactory.CreateSquareIcon(color, text.Substring(0, 1), 46);
+            icon.Image = CreateMappedIcon(iconKey, 46, delegate { return IconFactory.CreateSquareIcon(color, text.Substring(0, 1), 46); });
             icon.Location = new Point(14, 0);
             icon.Size = new Size(46, 46);
             icon.SizeMode = PictureBoxSizeMode.CenterImage;
@@ -379,12 +411,12 @@ namespace KurokoBasketballDesktop
         /// 创建带图标和文字的横向按钮。
         /// 头像下方的三个快捷入口会用这个样式。
         /// </summary>
-        private Control BuildIconTextButton(string text, Color color)
+        private Control BuildIconTextButton(string text, Color color, string iconKey)
         {
             Button button = BuildBaseButton("   " + text);
             button.Dock = DockStyle.Fill;
             button.Margin = new Padding(4, 0, 4, 0);
-            button.Image = IconFactory.CreateCircleIcon(color, text.Substring(0, 1), 22);
+            button.Image = CreateMappedIcon(iconKey, 22, delegate { return IconFactory.CreateCircleIcon(color, text.Substring(0, 1), 22); });
             button.ImageAlign = ContentAlignment.MiddleLeft;
             button.TextAlign = ContentAlignment.MiddleCenter;
             return button;
@@ -394,15 +426,29 @@ namespace KurokoBasketballDesktop
         /// 创建只显示图标的小按钮。
         /// 右上角邮件和交易市场会用这个样式。
         /// </summary>
-        private Control BuildIconOnlyButton(string text, Color color)
+        private Control BuildIconOnlyButton(string text, Color color, string iconKey)
         {
             Button button = BuildBaseButton("");
             button.Width = 48;
             button.Height = 48;
             button.Margin = new Padding(4, 0, 4, 0);
-            button.Image = IconFactory.CreateCircleIcon(color, text.Substring(0, 1), 26);
+            button.Image = CreateMappedIcon(iconKey, 26, delegate { return IconFactory.CreateCircleIcon(color, text.Substring(0, 1), 26); });
             button.Click += delegate { ShowFeaturePage(text); };
             return button;
+        }
+
+        /// <summary>
+        /// 创建主界面映射图标。
+        /// 如果素材目录和映射表中存在真实 PNG，就优先使用真实图片；否则使用 fallbackFactory 绘制占位图。
+        /// </summary>
+        private Image CreateMappedIcon(string iconKey, int size, Func<Image> fallbackFactory)
+        {
+            Image customIcon = iconLoader.LoadIcon(iconKey, size);
+            if (customIcon != null)
+            {
+                return customIcon;
+            }
+            return fallbackFactory();
         }
 
         /// <summary>
@@ -445,11 +491,12 @@ namespace KurokoBasketballDesktop
         /// </summary>
         private void ShowAvatarLibrary()
         {
-            using (AvatarDialog dialog = new AvatarDialog(avatarColors))
+            using (AvatarDialog dialog = new AvatarDialog(avatarColors, avatarIconKeys, iconLoader))
             {
                 if (dialog.ShowDialog(this) == DialogResult.OK)
                 {
                     avatarColor = dialog.SelectedColor;
+                    avatarIconKey = dialog.SelectedIconKey;
                     RefreshPlayerProfile();
                 }
             }
@@ -468,7 +515,7 @@ namespace KurokoBasketballDesktop
             if (avatarBox != null)
             {
                 Image oldImage = avatarBox.Image;
-                avatarBox.Image = IconFactory.CreateAvatarIcon(avatarColor, 46);
+                avatarBox.Image = CreateMappedIcon(avatarIconKey, 46, delegate { return IconFactory.CreateAvatarIcon(avatarColor, 46); });
                 if (oldImage != null)
                 {
                     oldImage.Dispose();
@@ -593,12 +640,13 @@ namespace KurokoBasketballDesktop
     internal sealed class AvatarDialog : Form
     {
         public Color SelectedColor { get; private set; }
+        public string SelectedIconKey { get; private set; }
 
         /// <summary>
         /// 创建头像库弹窗。
         /// avatarColors 中的每一项都会变成一个可点击头像按钮。
         /// </summary>
-        public AvatarDialog(Dictionary<string, Color> avatarColors)
+        public AvatarDialog(Dictionary<string, Color> avatarColors, Dictionary<string, string> avatarIconKeys, MainMenuIconLoader iconLoader)
         {
             Text = "选择头像";
             StartPosition = FormStartPosition.CenterParent;
@@ -608,21 +656,25 @@ namespace KurokoBasketballDesktop
             ClientSize = new Size(330, 135);
             Font = new Font("Microsoft YaHei UI", 9F);
             SelectedColor = Color.FromArgb(56, 189, 248);
+            SelectedIconKey = "avatar_blue";
 
             int left = 24;
             foreach (KeyValuePair<string, Color> pair in avatarColors)
             {
+                string iconKey = avatarIconKeys.ContainsKey(pair.Key) ? avatarIconKeys[pair.Key] : String.Empty;
                 Button button = new Button();
                 button.Text = pair.Key;
-                button.Image = IconFactory.CreateAvatarIcon(pair.Value, 42);
+                button.Image = iconLoader.LoadIcon(iconKey, 42) ?? IconFactory.CreateAvatarIcon(pair.Value, 42);
                 button.TextImageRelation = TextImageRelation.ImageAboveText;
                 button.Size = new Size(86, 92);
                 button.Location = new Point(left, 18);
                 button.Tag = pair.Value;
+                button.AccessibleName = iconKey;
                 button.Click += delegate(object sender, EventArgs args)
                 {
                     Button clicked = (Button)sender;
                     SelectedColor = (Color)clicked.Tag;
+                    SelectedIconKey = clicked.AccessibleName;
                     DialogResult = DialogResult.OK;
                     Close();
                 };
@@ -630,6 +682,295 @@ namespace KurokoBasketballDesktop
                 left += 96;
             }
         }
+    }
+
+    /// <summary>
+    /// 主界面图标映射表加载器。
+    /// 负责读取 02_素材图\主界面图标映射表.csv，并按功能编号加载对应 PNG。
+    /// </summary>
+    internal sealed class MainMenuIconLoader
+    {
+        private readonly string assetDirectory;
+        private readonly Dictionary<string, string> iconFiles;
+
+        /// <summary>
+        /// 创建加载器时会自动寻找桌面版素材目录并读取映射表。
+        /// 找不到目录或映射表时不会报错，界面会继续使用代码绘制的占位图标。
+        /// </summary>
+        public MainMenuIconLoader()
+        {
+            assetDirectory = FindAssetDirectory();
+            iconFiles = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            LoadMappingFile();
+        }
+
+        /// <summary>
+        /// 读取桌面窗口标题栏图标。
+        /// 图标文件固定为 02_素材图\game_icon.ico，读取失败时返回 null。
+        /// </summary>
+        public Icon LoadWindowIcon()
+        {
+            if (String.IsNullOrEmpty(assetDirectory))
+            {
+                return null;
+            }
+
+            string iconPath = Path.Combine(assetDirectory, "game_icon.ico");
+            if (!File.Exists(iconPath))
+            {
+                return null;
+            }
+
+            try
+            {
+                return new Icon(iconPath);
+            }
+            catch
+            {
+                return LoadPngAsIcon(iconPath);
+            }
+        }
+
+        /// <summary>
+        /// 兼容“PNG 图片改名为 game_icon.ico”的情况。
+        /// 如果文件不是标准 ICO，就尝试按普通图片读取并转换为窗口图标。
+        /// </summary>
+        private static Icon LoadPngAsIcon(string imagePath)
+        {
+            try
+            {
+                using (Image source = Image.FromFile(imagePath))
+                using (Bitmap bitmap = ResizeImage(source, 32))
+                {
+                    IntPtr handle = bitmap.GetHicon();
+                    try
+                    {
+                        using (Icon temporaryIcon = Icon.FromHandle(handle))
+                        {
+                            return (Icon)temporaryIcon.Clone();
+                        }
+                    }
+                    finally
+                    {
+                        NativeMethods.DestroyIcon(handle);
+                    }
+                }
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 按功能编号读取图标。
+        /// 成功时返回缩放后的图片，失败时返回 null，让界面继续使用占位图标。
+        /// </summary>
+        public Image LoadIcon(string iconKey, int size)
+        {
+            if (String.IsNullOrWhiteSpace(iconKey) || String.IsNullOrEmpty(assetDirectory))
+            {
+                return null;
+            }
+            if (!iconFiles.ContainsKey(iconKey))
+            {
+                return null;
+            }
+
+            string imagePath = ResolveImagePath(iconFiles[iconKey]);
+            if (String.IsNullOrEmpty(imagePath))
+            {
+                return null;
+            }
+
+            try
+            {
+                using (FileStream stream = new FileStream(imagePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (Image source = Image.FromStream(stream))
+                {
+                    return ResizeImage(source, size);
+                }
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 查找素材目录。
+        /// 支持从 01_桌面项目 运行，也支持从 04_打包输出 里的 exe 运行。
+        /// </summary>
+        private static string FindAssetDirectory()
+        {
+            List<string> baseDirectories = new List<string>();
+            baseDirectories.Add(AppDomain.CurrentDomain.BaseDirectory);
+            baseDirectories.Add(Environment.CurrentDirectory);
+
+            foreach (string baseDirectory in baseDirectories)
+            {
+                string candidate = Path.GetFullPath(Path.Combine(baseDirectory, "..", "02_素材图"));
+                if (Directory.Exists(candidate))
+                {
+                    return candidate;
+                }
+            }
+
+            return String.Empty;
+        }
+
+        /// <summary>
+        /// 读取映射表。
+        /// 表格固定为：功能编号,功能名称,图片文件名。
+        /// </summary>
+        private void LoadMappingFile()
+        {
+            if (String.IsNullOrEmpty(assetDirectory))
+            {
+                return;
+            }
+
+            string mappingPath = Path.Combine(assetDirectory, "主界面图标映射表.csv");
+            if (!File.Exists(mappingPath))
+            {
+                return;
+            }
+
+            string[] lines = File.ReadAllLines(mappingPath, Encoding.UTF8);
+            for (int i = 1; i < lines.Length; i++)
+            {
+                if (String.IsNullOrWhiteSpace(lines[i]))
+                {
+                    continue;
+                }
+
+                List<string> columns = ParseCsvLine(lines[i]);
+                if (columns.Count < 3)
+                {
+                    continue;
+                }
+
+                string iconKey = columns[0].Trim().TrimStart('\uFEFF');
+                string imageFileName = columns[2].Trim();
+                if (String.IsNullOrWhiteSpace(iconKey) || String.IsNullOrWhiteSpace(imageFileName))
+                {
+                    continue;
+                }
+
+                iconFiles[iconKey] = imageFileName;
+            }
+        }
+
+        /// <summary>
+        /// 根据映射表里的图片名找到真实图片路径。
+        /// 如果图片名没写 .png，会自动尝试补上 .png。
+        /// </summary>
+        private string ResolveImagePath(string imageFileName)
+        {
+            string directPath = SafeCombine(assetDirectory, imageFileName);
+            if (!String.IsNullOrEmpty(directPath) && File.Exists(directPath))
+            {
+                return directPath;
+            }
+
+            if (String.IsNullOrEmpty(Path.GetExtension(imageFileName)))
+            {
+                string pngPath = SafeCombine(assetDirectory, imageFileName + ".png");
+                if (!String.IsNullOrEmpty(pngPath) && File.Exists(pngPath))
+                {
+                    return pngPath;
+                }
+            }
+
+            return String.Empty;
+        }
+
+        /// <summary>
+        /// 安全拼接素材路径。
+        /// 防止映射表用 .. 跳出素材目录。
+        /// </summary>
+        private static string SafeCombine(string root, string fileName)
+        {
+            try
+            {
+                string fullRoot = Path.GetFullPath(root);
+                string fullPath = Path.GetFullPath(Path.Combine(fullRoot, fileName));
+                if (!fullPath.StartsWith(fullRoot, StringComparison.OrdinalIgnoreCase))
+                {
+                    return String.Empty;
+                }
+                return fullPath;
+            }
+            catch
+            {
+                return String.Empty;
+            }
+        }
+
+        /// <summary>
+        /// 把原图等比例缩放到指定大小。
+        /// 返回新的 Bitmap，调用方可以直接放到 PictureBox 或 Button.Image 上。
+        /// </summary>
+        private static Bitmap ResizeImage(Image source, int size)
+        {
+            Bitmap output = new Bitmap(size, size);
+            using (Graphics graphics = Graphics.FromImage(output))
+            {
+                graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                graphics.Clear(Color.Transparent);
+                graphics.DrawImage(source, new Rectangle(0, 0, size, size));
+            }
+            return output;
+        }
+
+        /// <summary>
+        /// 简单 CSV 解析。
+        /// 支持英文逗号分隔，也支持带双引号的文件名。
+        /// </summary>
+        private static List<string> ParseCsvLine(string line)
+        {
+            List<string> result = new List<string>();
+            StringBuilder current = new StringBuilder();
+            bool inQuotes = false;
+
+            for (int i = 0; i < line.Length; i++)
+            {
+                char value = line[i];
+                if (value == '"' && inQuotes && i + 1 < line.Length && line[i + 1] == '"')
+                {
+                    current.Append('"');
+                    i++;
+                }
+                else if (value == '"')
+                {
+                    inQuotes = !inQuotes;
+                }
+                else if (value == ',' && !inQuotes)
+                {
+                    result.Add(current.ToString().Trim());
+                    current.Length = 0;
+                }
+                else
+                {
+                    current.Append(value);
+                }
+            }
+
+            result.Add(current.ToString().Trim());
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// Windows 原生方法。
+    /// 用于释放 Bitmap.GetHicon 创建出来的临时图标句柄，避免资源泄漏。
+    /// </summary>
+    internal static class NativeMethods
+    {
+        [DllImport("user32.dll", SetLastError = true)]
+        internal static extern bool DestroyIcon(IntPtr handle);
     }
 
     /// <summary>

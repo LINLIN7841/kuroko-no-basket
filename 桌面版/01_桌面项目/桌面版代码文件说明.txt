@@ -1,0 +1,185 @@
+黑子的篮球游戏 - 桌面版代码文件说明
+
+这个文件用来说明桌面版每个代码文件和配置文件的作用。
+以后你想改桌面版功能时，可以先看这里判断应该打开哪个文件。
+
+
+一、桌面版项目代码目录
+
+位置：
+C:\Users\LVZELIN\Desktop\黑子的篮球游戏制作\桌面版\01_桌面项目
+
+这个目录里放桌面版真正参与打包的代码和脚本。
+
+
+1. DesktopLobbyMainProgram.cs
+
+作用：
+这是桌面版最主要的 C# 程序文件。
+桌面版窗口、主界面布局、按钮、弹窗、图标读取逻辑，大部分都写在这个文件里。
+
+你想改这些内容时，主要看这个文件：
+- 桌面版窗口标题
+- 主界面布局
+- 顶部资源栏：金币、钻石、点券、黑子券
+- 右上角入口：邮件、篮球交易市场
+- 头像下方入口：会员卡商店、赛季征程、限时商店
+- 左侧入口：扭蛋、商城、活动大厅
+- 底部按钮：潜力、篮球、背包、球员、成就
+- 改名弹窗
+- 头像选择弹窗
+- 主界面图标映射表读取
+- game_icon.ico 标题栏图标读取
+- 没有真实图片时的占位图标绘制
+
+常见修改位置：
+- 想新增左侧功能入口：找 BuildLeftMenu
+- 想改顶部资源：找 BuildResourceBar
+- 想改头像下方三个入口：找 BuildShortcutRow
+- 想改右上角入口：找 BuildTopRightActions
+- 想改底部五个按钮：找 BuildBottomMenu
+- 想改图标读取方式：找 MainMenuIconLoader
+- 想改占位图标样式：找 IconFactory
+
+
+2. build_desktop.bat
+
+作用：
+这是桌面版的双击打包入口。
+它本身不直接编译代码，只负责调用 build_desktop_with_icon.ps1。
+
+你平时要重新生成 EXE 时，运行这个文件即可。
+
+生成的 EXE 位置：
+C:\Users\LVZELIN\Desktop\黑子的篮球游戏制作\桌面版\04_打包输出\KurokoBasketballDesktop.exe
+
+注意：
+如果打包失败并提示 EXE 被占用，先关闭已经打开的桌面版程序，再重新运行这个文件。
+
+
+3. build_desktop_with_icon.ps1
+
+作用：
+这是桌面版真正的编译脚本。
+它负责调用 Windows 自带的 C# 编译器，把 DesktopLobbyMainProgram.cs 编译成 EXE。
+
+它还负责处理 EXE 图标：
+- 检查 02_素材图\game_icon.ico 是否存在
+- 如果存在，就把图标打进 EXE
+- 如果 game_icon.ico 实际是 PNG 图片内容，也会自动转换成兼容的 ICO 再打包
+- 如果不存在，就使用默认 EXE 图标
+
+一般情况下不需要改这个文件。
+只有你要改编译方式、输出文件名、输出目录、图标打包规则时，才需要看这个文件。
+
+
+4. README.md
+
+作用：
+这是桌面版项目说明。
+里面写了：
+- 桌面版是什么
+- 怎么打包
+- EXE 图标怎么放
+- 主界面图标怎么通过映射表替换
+- 当前桌面版包含哪些功能
+
+如果你只是想知道怎么使用桌面版，先看 README.md。
+
+
+二、桌面版素材与配置目录
+
+位置：
+C:\Users\LVZELIN\Desktop\黑子的篮球游戏制作\桌面版\02_素材图
+
+这个目录里放桌面版会读取的图片素材和图标配置。
+
+
+5. 主界面图标映射表.csv
+
+作用：
+这是桌面版主界面图标的对应关系表。
+你不需要改图片原文件名，只需要把图片名填到这个表里。
+
+表格格式：
+功能编号,功能名称,图片文件名
+
+例子：
+gold,金币,金币图标.png
+shop,商城,商城入口图.png
+gacha,扭蛋,扭蛋图标.png
+
+支持的功能编号：
+avatar_blue      蓝色头像
+avatar_red       红色头像
+avatar_gold      金色头像
+gold             金币
+diamond          钻石
+coupon           点券
+kuroko_ticket    黑子券
+mail             邮件
+market           篮球交易市场
+member_card      会员卡商店
+season           赛季征程
+limited_shop     限时商店
+gacha            扭蛋
+shop             商城
+activity         活动大厅
+
+如果图片文件名没有写 .png，程序会自动尝试补 .png 查找。
+如果找不到图片，对应位置会继续使用程序绘制的占位图标。
+
+
+6. game_icon.ico
+
+作用：
+这是桌面版程序图标来源。
+它会用于两个地方：
+- Windows 文件资源管理器中显示的 EXE 图标
+- 打开程序后，窗口标题栏左边的小图标
+
+放置位置：
+C:\Users\LVZELIN\Desktop\黑子的篮球游戏制作\桌面版\02_素材图\game_icon.ico
+
+注意：
+如果这个文件实际是 PNG 图片改后缀，当前打包脚本和程序也会尽量兼容。
+但最推荐的做法，还是使用真正的 .ico 文件。
+
+
+三、最常见操作
+
+1. 只换主界面里的图标
+
+操作：
+- 把 PNG 图片放到 桌面版\02_素材图
+- 打开 主界面图标映射表.csv
+- 在对应功能编号的第三列填写图片文件名
+- 重新运行 build_desktop.bat
+
+
+2. 只换 EXE 和标题栏图标
+
+操作：
+- 把图标放到 桌面版\02_素材图
+- 文件名改成 game_icon.ico
+- 重新运行 build_desktop.bat
+
+
+3. 新增一个功能入口
+
+操作：
+- 打开 DesktopLobbyMainProgram.cs
+- 在对应区域新增按钮代码
+- 给这个按钮设置一个新的功能编号，例如 rank
+- 在 主界面图标映射表.csv 里新增一行，例如：
+  rank,排行榜,排行榜图标.png
+- 重新运行 build_desktop.bat
+
+
+四、简单记忆
+
+换图片：改 02_素材图 和 主界面图标映射表.csv
+改界面：改 DesktopLobbyMainProgram.cs
+重新生成 EXE：运行 build_desktop.bat
+改打包逻辑：改 build_desktop_with_icon.ps1
+看使用说明：看 README.md

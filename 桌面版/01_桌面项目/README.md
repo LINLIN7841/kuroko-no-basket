@@ -26,6 +26,32 @@ build_desktop.bat
 
 然后重新运行 `build_desktop.bat`。脚本会自动检测这个文件；如果不存在，会继续使用默认 EXE 图标。
 
+## 主界面图标
+
+如果要替换窗口里面的主界面图标，把 PNG 图片放到：
+
+```text
+..\02_素材图
+```
+
+然后编辑同目录下的：
+
+```text
+主界面图标映射表.csv
+```
+
+映射表格式为：
+
+```csv
+功能编号,功能名称,图片文件名
+gold,金币,UI_Dynamic_ItemIcon_Currency4_02.png
+coupon,点券,UI_Dynamic_ItemIcon_Currency21_02.png
+```
+
+图片原文件名不用改。桌面版会优先按映射表读取图片；如果图片名没写 `.png`，会自动再尝试补 `.png` 查找。找不到图片时，对应图标继续使用程序绘制的占位图。
+
+支持的功能编号和安卓版一致：`avatar_blue`、`avatar_red`、`avatar_gold`、`gold`、`diamond`、`coupon`、`kuroko_ticket`、`mail`、`market`、`member_card`、`season`、`limited_shop`、`gacha`、`shop`、`activity`。
+
 ## 当前功能
 
 - 主界面复刻安卓版布局。
