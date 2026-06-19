@@ -1,5 +1,6 @@
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
+import java.io.File
 import javax.imageio.ImageIO
 
 plugins {
@@ -53,7 +54,11 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-val launcherIconSource = rootProject.file("../02_素材图/Logo/game_icon.png")
+val launcherIconSourceCandidates = listOf(
+    rootProject.file("../02_素材图/Logo/game_icon.png"),
+    rootProject.file("../02_素材图/Logo/game_icon.ico")
+)
+val launcherIconSourceDir = rootProject.file("../02_素材图/Logo")
 val launcherIconSizes = mapOf(
     "mipmap-mdpi" to 48,
     "mipmap-hdpi" to 72,
@@ -83,16 +88,21 @@ val mainMenuIconTargets = mapOf(
 
 tasks.register("prepareLauncherIcons") {
     group = "assets"
-    description = "如果存在 ../02_素材图/Logo/game_icon.png，就自动生成安卓启动图标。"
+    description = "如果存在 ../02_素材图/Logo/game_icon.png 或 game_icon.ico，就自动生成安卓启动图标。"
+    inputs.dir(launcherIconSourceDir).withPropertyName("launcherIconSourceDir").optional()
 
     doLast {
-        if (!launcherIconSource.exists()) {
-            logger.lifecycle("未找到 ${launcherIconSource.path}，继续使用默认占位启动图标。")
+        val launcherIconSource = launcherIconSourceCandidates.firstOrNull { it.exists() }
+        if (launcherIconSource == null) {
+            logger.lifecycle("未找到 ${launcherIconSourceCandidates.joinToString { it.path }}，继续使用默认占位启动图标。")
             return@doLast
         }
 
         val sourceImage = ImageIO.read(launcherIconSource)
-            ?: throw GradleException("无法读取图标文件：${launcherIconSource.path}")
+        if (sourceImage == null) {
+            logger.lifecycle("无法读取启动图标文件：${launcherIconSource.path}。如果它是把 PNG 改后缀成 ico，请确认文件内容仍是普通 PNG。继续使用默认占位启动图标。")
+            return@doLast
+        }
 
         launcherIconSizes.forEach { (folderName, size) ->
             val outputDir = project.file("src/main/res/$folderName")
@@ -149,19 +159,19 @@ tasks.register("prepareMainMenuIcons") {
                 return@forEachIndexed
             }
 
-            if (!imageFileName.endsWith(".png", ignoreCase = true)) {
-                logger.lifecycle("主界面图标 ${iconName.ifBlank { iconId }} 指向的文件不是 PNG：${imageFileName}，已跳过。")
-                return@forEachIndexed
-            }
-
-            val sourceFile = mainMenuIconSourceDir.resolve(imageFileName)
+            val sourceFile = resolveImageFile(mainMenuIconSourceDir, imageFileName)
             if (!sourceFile.exists()) {
-                logger.lifecycle("主界面图标 ${iconName.ifBlank { iconId }} 未找到图片：${sourceFile.path}，继续使用占位图标。")
+                logger.lifecycle("主界面图标 ${iconName.ifBlank { iconId }} 未找到图片：${mainMenuIconSourceDir.resolve(imageFileName).path}，继续使用占位图标。")
                 return@forEachIndexed
             }
 
             if (!sourceFile.canonicalPath.startsWith(sourceRootPath)) {
                 logger.lifecycle("主界面图标 ${iconName.ifBlank { iconId }} 的图片不在按钮图标目录内，已跳过：${sourceFile.path}")
+                return@forEachIndexed
+            }
+
+            if (ImageIO.read(sourceFile) == null) {
+                logger.lifecycle("主界面图标 ${iconName.ifBlank { iconId }} 不是可读取图片：${sourceFile.path}，已跳过。")
                 return@forEachIndexed
             }
 
@@ -189,6 +199,22 @@ fun resizeSquare(source: BufferedImage, size: Int): BufferedImage {
     graphics.drawImage(source, 0, 0, size, size, cropX, cropY, cropX + cropSize, cropY + cropSize, null)
     graphics.dispose()
     return output
+}
+
+fun resolveImageFile(sourceDir: File, imageFileName: String): File {
+    val directFile = sourceDir.resolve(imageFileName)
+    if (directFile.exists()) {
+        return directFile
+    }
+
+    if (directFile.extension.isBlank()) {
+        val pngFile = sourceDir.resolve("$imageFileName.png")
+        if (pngFile.exists()) {
+            return pngFile
+        }
+    }
+
+    return directFile
 }
 
 fun parseCsvLine(line: String): List<String> {
